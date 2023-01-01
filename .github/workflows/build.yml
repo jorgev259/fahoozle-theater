@@ -23,7 +23,7 @@ jobs:
           cd client
           npm install
           npm run build
-          rm ../server/site
+          rm -r ../server/site
           mv build ../server/site
 
       - name: Build server
