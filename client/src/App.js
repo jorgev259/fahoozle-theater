@@ -12,10 +12,9 @@ function getRandom (list) {
 }
 
 const rowsInfo = [
-  { max: 13, offset: { x: 18, y: 384 }, viewer: { width: 45, height: 50, seatStep: 68 } },
-  { max: 11, offset: { x: 47, y: 398 }, viewer: { width: 45, height: 50, seatStep: 76 } },
-  { max: 11, offset: { x: 10, y: 412 }, viewer: { width: 45, height: 50, seatStep: 83 } },
-  { max: 9, offset: { x: 52, y: 428 }, viewer: { width: 45, height: 50, seatStep: 94 } }
+  { max: 13, offset: { x: 30, y: 865 }, viewer: { width: 85, height: 85, seatStep: 152 } },
+  { max: 11, offset: { x: 100, y: 895 }, viewer: { width: 85, height: 85, seatStep: 168 } },
+  { image: false, max: 11, offset: { x: 15, y: 925 }, viewer: { width: 90, height: 90, seatStep: 184 } }
 ]
 
 const allSeats = [...Array(rowsInfo.map(row => row.max).reduce((a, b) => a + b)).keys()]
@@ -85,7 +84,7 @@ export default function App () {
   return (
     <>
       <Overlay />
-      <Stage width={900} height={600}>
+      <Stage width={1920} height={1080}>
         <Layer>
           <Image image={screenImage} />
         </Layer>
@@ -102,7 +101,7 @@ export default function App () {
 
 function Row (props) {
   const { info, index } = props
-  const { viewer = {}, offset = {}, start } = info
+  const { viewer = {}, offset = {}, start, image = true } = info
   const [rowsImage] = useImage(`/img/rows${index}.png`)
 
   return (
@@ -111,7 +110,7 @@ function Row (props) {
         {[...Array(info.max).keys()]
           .map(index => <Seat key={index} index={index} seat={start + index} {...viewer} />)}
       </Group>
-      <Image image={rowsImage} />
+      {image ? <Image image={rowsImage} /> : null}
     </>
   )
 }
@@ -120,7 +119,7 @@ function Seat (props) {
   const { width, height, seatStep, index, seat } = props
 
   const [viewerImage] = useImage('/img/viewer.png')
-  const [talkingImage] = useImage('/img/talk.gif')
+  const [talkingImage] = useImage('/img/talk.png')
 
   const [occupied, setOccupied] = useState(false)
   const [talking, setTalking] = useState(false)
@@ -152,7 +151,7 @@ function Seat (props) {
 
     seats[seat].lastMessage = Date.now()
     setTalking(true)
-    timeoutRef.current = setTimeout(() => setTalking(false), 3 * 1000)
+    timeoutRef.current = setTimeout(() => setTalking(false), 5 * 1000)
   })
 
   return (
@@ -161,7 +160,7 @@ function Seat (props) {
         ? (
             <Group>
               <Image image={viewerImage} width={width} height={height} />
-              {talking ? <Image image={talkingImage} x={20} y={-40} offsetX={48} offsetY={48} /> : null}
+              {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
             </Group>
           )
         : null}
