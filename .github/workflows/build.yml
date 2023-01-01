@@ -21,7 +21,7 @@ jobs:
       - name: Build website
         run: |
           cd client
-          npm install --omit=dev 
+          npm install
           npm run build
           rm ../server/site
           mv build ../server/site
