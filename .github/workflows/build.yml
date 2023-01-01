@@ -23,14 +23,8 @@ jobs:
           cd client
           npm install
           npm run build
-          rm -r ../server/site
-          mv build ../server/site
-
-      - name: Build server
-        run: |
-          cd server
-          npm install
-          npm run build
+          rm -r ../server/build
+          mv build ../server/build
 
       - name: Commit changes
         run: |

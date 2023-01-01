@@ -1,1 +1,1 @@
-node dist
+npm run serve
