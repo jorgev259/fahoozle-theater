@@ -6,7 +6,7 @@ import EventEmmiter from 'eventemitter3'
 const queryParams = new URLSearchParams(window.location.search)
 const username = queryParams.get('username')
 
-const authProvider = new ClientCredentialsAuthProvider('eow24ls2r2t4ot6cmtbix4rdy6yxch', 'xrrz8fsx105ay8a3jxwifhy2m546cp')
+const authProvider = new ClientCredentialsAuthProvider('eow24ls2r2t4ot6cmtbix4rdy6yxch', 'mcvglpvjqcjxxfeao371dg6j23nmr8')
 export const apiClient = new ApiClient({ authProvider })
 export const emitter = new EventEmmiter()
 

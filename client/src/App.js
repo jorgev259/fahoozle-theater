@@ -46,7 +46,7 @@ emitter.on('viewers', viewers => {
   } else if (occupiedLength > viewers) {
     const removeLength = occupiedLength - viewers
     for (let i = 0; i < removeLength; i++) {
-      let seatIndex = seats.findIndex(s => !!s.username)
+      const seatIndex = seats.findIndex(s => !!s.username)
 
       /* if (seatIndex === -1) {
         seatIndex = seats.reduce((result, seat) => {
@@ -74,7 +74,7 @@ chatClient.on('chat', (_, user, message, self) => {
     emitter.emit(`sit-${seatNumber}`, username)
   }
 
-  emitter.emit(`talk-${seatNumber}`)
+  emitter.emit(`talk-${seatNumber}`, { color: user.color })
 })
 
 export default function App () {
@@ -119,26 +119,49 @@ function Seat (props) {
   const { width, height, seatStep, index, seat } = props
 
   const [viewerImage] = useImage('/img/viewer.png')
+  const viewerImageRef = useRef()
   const [talkingImage] = useImage('/img/talk.png')
 
   const [occupied, setOccupied] = useState(false)
   const [talking, setTalking] = useState(false)
   const [username, setUsername] = useState(null)
+  const [color, setColor] = useState(null)
   const timeoutRef = useRef(null)
+
+  function ColorReplaceFilter (imageData) {
+    if (!color) return
+
+    const nPixels = imageData.data.length
+    for (let i = 0; i < nPixels - 4; i += 4) {
+      const isTransparent = imageData.data[i + 3] === 0
+      if (!isTransparent) {
+        const rgbdata = [255, 0, 0]
+
+        imageData.data[i] = rgbdata[0]
+        imageData.data[i + 1] = rgbdata[1]
+        imageData.data[i + 2] = rgbdata[2]
+      }
+    }
+  }
 
   useEffect(() => {
     if (occupied) {
-      seats[seat] = { occupied, talking, username }
+      seats[seat] = { occupied, talking, username, color }
     } else {
       delete seats[seat]
     }
-  }, [occupied, talking, username])
+  }, [occupied, talking, username, color])
 
   useEffect(() => {
     if (!occupied) {
       setTalking(false)
       setUsername(null)
+      setColor(null)
     }
+  }, [occupied])
+
+  useEffect(() => {
+    if (occupied) viewerImageRef.current.cache()
   }, [occupied])
 
   const targetX = 0 + (index * seatStep)
@@ -146,12 +169,14 @@ function Seat (props) {
   emitter.on(`fill-${seat}`, () => setOccupied(true))
   emitter.on(`empty-${seat}`, () => setOccupied(false))
   emitter.on(`sit-${seat}`, incoming => setUsername(incoming))
-  emitter.on(`talk-${seat}`, () => {
+  emitter.on(`talk-${seat}`, incoming => {
     clearTimeout(timeoutRef.current)
 
-    seats[seat].lastMessage = Date.now()
+    // seats[seat].lastMessage = Date.now()
     setTalking(true)
-    timeoutRef.current = setTimeout(() => setTalking(false), 5 * 1000)
+    console.log(incoming)
+    if (incoming.color !== color) setColor(incoming.color)
+    timeoutRef.current = setTimeout(() => setTalking(false), 4 * 1000)
   })
 
   return (
@@ -159,7 +184,7 @@ function Seat (props) {
       {occupied
         ? (
             <Group>
-              <Image image={viewerImage} width={width} height={height} />
+              <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[ColorReplaceFilter]} />
               {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
             </Group>
           )
