@@ -3,6 +3,7 @@ import './styles/App.scss'
 import { useEffect, useRef, useState } from 'react'
 import { Stage, Layer, Image, Group } from 'react-konva'
 import useImage from 'use-image'
+import { Spring, animated/*, easings */ } from '@react-spring/konva'
 
 import Overlay from './components/overlay'
 import { emitter, chatClient } from './components/chat'
@@ -101,14 +102,14 @@ export default function App () {
 
 function Row (props) {
   const { info, index } = props
-  const { viewer = {}, offset = {}, start, image = true } = info
+  const { viewer = {}, offset = {}, start, image = true, max } = info
   const [rowsImage] = useImage(`/img/rows${index}.png`)
 
   return (
     <>
       <Group x={offset.x} y ={offset.y}>
-        {[...Array(info.max).keys()]
-          .map(index => <Seat key={index} index={index} seat={start + index} {...viewer} />)}
+        {[...Array(max).keys()]
+          .map(index => <Seat key={index} index={index} seat={start + index} offsetX={offset.x} max={max} {...viewer} />)}
       </Group>
       {image ? <Image image={rowsImage} /> : null}
     </>
@@ -116,7 +117,7 @@ function Row (props) {
 }
 
 function Seat (props) {
-  const { width, height, seatStep, index, seat } = props
+  const { width, height, seatStep, index, seat, offsetX, max } = props
 
   const [viewerImage] = useImage('/img/viewer.png')
   const viewerImageRef = useRef()
@@ -165,6 +166,9 @@ function Seat (props) {
   }, [occupied])
 
   const targetX = 0 + (index * seatStep)
+  const entranceLeft = index <= Math.floor(max / 2)
+  const startX = entranceLeft ? -offsetX - (width / 2) : 1920 + (width / 2)
+  const duration = (entranceLeft ? offsetX + targetX : (max - index) * seatStep) * 3.6
 
   emitter.on(`fill-${seat}`, () => setOccupied(true))
   emitter.on(`empty-${seat}`, () => setOccupied(false))
@@ -174,21 +178,29 @@ function Seat (props) {
 
     // seats[seat].lastMessage = Date.now()
     setTalking(true)
-    console.log(incoming)
+
     if (incoming.color !== color) setColor(incoming.color)
     timeoutRef.current = setTimeout(() => setTalking(false), 4 * 1000)
   })
 
   return (
-    <Group x={targetX} >
-      {occupied
-        ? (
-            <Group>
-              <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[ColorReplaceFilter]} />
-              {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
-            </Group>
-          )
-        : null}
-    </Group>
+    <Spring native immediate={!occupied} from={{ x: startX }} to={{ x: occupied ? targetX : startX }} config={{ duration }}>
+      {slideProps => (
+        /* {<Spring native loop={true} from={{ y: 0 }} to={occupied ? [{ y: -20 }, { y: -5 }] : { y: 0 }} config={{ easing: easings.easeInOutSine }} duration={25}>
+          {bounceProps => ( */
+            <animated.Group {...slideProps} /* {...bounceProps} */>
+              {occupied
+                ? (
+                  <Group>
+                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[ColorReplaceFilter]} />
+                    {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
+                  </Group>
+                  )
+                : null}
+            </animated.Group>
+        /*  )}
+        </Spring> */
+      )}
+    </Spring>
   )
 }
