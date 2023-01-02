@@ -48,13 +48,13 @@ emitter.on('viewers', viewers => {
     for (let i = 0; i < removeLength; i++) {
       let seatIndex = seats.findIndex(s => !!s.username)
 
-      if (seatIndex === -1) {
+      /* if (seatIndex === -1) {
         seatIndex = seats.reduce((result, seat) => {
           if (!result && seat) return seat
           if (seat.lastMessage > result.lastMessage) return seat
           else return result
         })
-      }
+      } */
 
       emitter.emit(`empty-${seatIndex}`)
     }
