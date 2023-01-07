@@ -58,10 +58,10 @@ emitter.on('viewers', viewers => {
       if (heartless.length > 0) {
         seatIndex = heartless[0].seat
         heartless.splice(0, 1)
-      } else {
+      } /* else {
         seatIndex = chatViewers[0].seat
         chatViewers.splice(0, 1)
-      }
+      } */
 
       emitter.emit(`empty-${seatIndex}`)
     }
@@ -134,6 +134,7 @@ function Seat (props) {
   const [username, setUsername] = useState(null)
   const [color, setColor] = useState(null)
   const timeoutRef = useRef(null)
+  const inactivityRef = useRef(null)
 
   function ColorReplaceFilter (imageData) {
     if (!color) return
@@ -181,12 +182,14 @@ function Seat (props) {
   emitter.on(`sit-${seat}`, incoming => setUsername(incoming))
   emitter.on(`talk-${seat}`, incoming => {
     clearTimeout(timeoutRef.current)
+    clearTimeout(inactivityRef.current)
 
     seats[seat].lastMessage = Date.now()
     setTalking(true)
 
-    if (incoming.color !== color) setColor(incoming.color)
+    if (incoming.color && incoming.color !== color) setColor(incoming.color)
     timeoutRef.current = setTimeout(() => setTalking(false), 4 * 1000)
+    inactivityRef.current = setTimeout(() => setOccupied(false), 5 * 60 * 1000)
   })
 
   return (
