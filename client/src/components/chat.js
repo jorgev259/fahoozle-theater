@@ -11,17 +11,13 @@ export const apiClient = new ApiClient({ authProvider })
 export const emitter = new EventEmmiter()
 
 export const chatClient = new tmi.Client({ channels: [username] })
-let viewers
 
 if (username) {
   apiClient.users.getUserByName(username)
     .then(async user => {
       setInterval(async () => {
         const stream = await user.getStream()
-        if (stream && viewers !== stream.viewers) {
-          emitter.emit('viewers', stream.viewers)
-          viewers = stream.viewers
-        }
+        if (stream) emitter.emit('viewers', stream.viewers)
       }, 5 * 1000)
     })
 

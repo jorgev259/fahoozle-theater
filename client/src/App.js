@@ -45,17 +45,23 @@ emitter.on('viewers', viewers => {
       addViewer()
     }
   } else if (occupiedLength > viewers) {
-    const removeLength = occupiedLength - viewers
-    for (let i = 0; i < removeLength; i++) {
-      const seatIndex = seats.findIndex(s => !!s.username)
+    const [heartless, chatViewers] = seats.reduce((acc, viewer) => {
+      acc[viewer.username ? 1 : 0].push(viewer)
+      return acc
+    }, [[], []])
+    chatViewers.sort((a, b) => a.lastMessage - b.lastMessage)
 
-      /* if (seatIndex === -1) {
-        seatIndex = seats.reduce((result, seat) => {
-          if (!result && seat) return seat
-          if (seat.lastMessage > result.lastMessage) return seat
-          else return result
-        })
-      } */
+    const removeLength = occupiedLength - viewers
+
+    for (let i = 0; i < removeLength; i++) {
+      let seatIndex
+      if (heartless.length > 0) {
+        seatIndex = heartless[0].seat
+        heartless.splice(0, 1)
+      } else {
+        seatIndex = chatViewers[0].seat
+        chatViewers.splice(0, 1)
+      }
 
       emitter.emit(`empty-${seatIndex}`)
     }
@@ -147,7 +153,7 @@ function Seat (props) {
 
   useEffect(() => {
     if (occupied) {
-      seats[seat] = { occupied, talking, username, color }
+      seats[seat] = { occupied, talking, username, color, seat }
     } else {
       delete seats[seat]
     }
@@ -176,7 +182,7 @@ function Seat (props) {
   emitter.on(`talk-${seat}`, incoming => {
     clearTimeout(timeoutRef.current)
 
-    // seats[seat].lastMessage = Date.now()
+    seats[seat].lastMessage = Date.now()
     setTalking(true)
 
     if (incoming.color !== color) setColor(incoming.color)
