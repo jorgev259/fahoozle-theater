@@ -81,7 +81,7 @@ chatClient.on('chat', (_, user, message, self) => {
     emitter.emit(`sit-${seatNumber}`, username)
   }
 
-  emitter.emit(`talk-${seatNumber}`, { color: user.color })
+  emitter.emit(`talk-${seatNumber}`, { color: user.color, emotes: user.emotes ? Object.keys(user.emotes) : [] })
 })
 
 export default function App () {
@@ -147,14 +147,15 @@ function Seat (props) {
 
   const [viewerImage] = useImage('/img/viewer.png')
   const viewerImageRef = useRef()
-  const [talkingImage] = useImage('/img/talk.png')
 
   const [occupied, setOccupied] = useState(false)
   const [talking, setTalking] = useState(false)
   const [username, setUsername] = useState(null)
   const [color, setColor] = useState(null)
+  const [emotes, setEmotes] = useState([])
   const timeoutRef = useRef(null)
   const inactivityRef = useRef(null)
+  const emoteRef = useRef(null)
 
   useEffect(() => {
     if (occupied) {
@@ -169,12 +170,21 @@ function Seat (props) {
       setTalking(false)
       setUsername(null)
       setColor(null)
+      setEmotes([])
     }
   }, [occupied])
 
   useEffect(() => {
     if (occupied) viewerImageRef.current.cache()
   }, [occupied])
+
+  useEffect(() => {
+    if (!occupied || emotes.length === 0) return
+
+    clearTimeout(emoteRef.current)
+
+    setTimeout(() => setEmotes(emotes.slice(1)), 3 * 1000)
+  }, [emotes])
 
   const targetX = 0 + (index * seatStep)
   const entranceLeft = index <= Math.floor(max / 2)
@@ -190,9 +200,10 @@ function Seat (props) {
 
     seats[seat].lastMessage = Date.now()
     setTalking(true)
+    setEmotes(incoming.emotes)
 
     if (incoming.color && incoming.color !== color) setColor(incoming.color)
-    timeoutRef.current = setTimeout(() => setTalking(false), 4 * 1000)
+    timeoutRef.current = setTimeout(() => setTalking(false), (incoming.emotes.length > 0 ? 3 * incoming.emotes.length : 4) * 1000)
     inactivityRef.current = setTimeout(() => setOccupied(false), 5 * 60 * 1000)
   })
 
@@ -206,7 +217,7 @@ function Seat (props) {
                 ? (
                   <Group>
                     <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
-                    {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
+                    {talking ? <Bubble emote={emotes[0]} /> : null}
                   </Group>
                   )
                 : null}
@@ -215,5 +226,19 @@ function Seat (props) {
         </Spring> */
       )}
     </Spring>
+  )
+}
+
+function Bubble (props) {
+  const { emote } = props
+  const [talkBaseImage] = useImage('/img/talkBase.png')
+  const [talkDotsImage] = useImage('/img/talkDots.png')
+  const [emoteImage] = useImage(`https://static-cdn.jtvnw.net/emoticons/v2/${emote || '25'}/static/dark/2.0`)
+
+  return (
+    <Group x={25} y={-20} offsetX={48} offsetY={48} >
+      <Image image={talkBaseImage}/>
+      {emote ? <Image image={emoteImage} height={30} x={18} y={18} rotation={15}/> : <Image image={talkDotsImage} />}
+    </Group>
   )
 }
