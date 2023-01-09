@@ -122,21 +122,8 @@ function Row (props) {
   )
 }
 
-function Seat (props) {
-  const { width, height, seatStep, index, seat, offsetX, max } = props
-
-  const [viewerImage] = useImage('/img/viewer.png')
-  const viewerImageRef = useRef()
-  const [talkingImage] = useImage('/img/talk.png')
-
-  const [occupied, setOccupied] = useState(false)
-  const [talking, setTalking] = useState(false)
-  const [username, setUsername] = useState(null)
-  const [color, setColor] = useState(null)
-  const timeoutRef = useRef(null)
-  const inactivityRef = useRef(null)
-
-  function ColorReplaceFilter (imageData) {
+const colorReplaceFn = color => {
+  function colorReplaceFilter (imageData) {
     if (!color) return
 
     const nPixels = imageData.data.length
@@ -151,6 +138,23 @@ function Seat (props) {
       }
     }
   }
+
+  return colorReplaceFilter
+}
+
+function Seat (props) {
+  const { width, height, seatStep, index, seat, offsetX, max } = props
+
+  const [viewerImage] = useImage('/img/viewer.png')
+  const viewerImageRef = useRef()
+  const [talkingImage] = useImage('/img/talk.png')
+
+  const [occupied, setOccupied] = useState(false)
+  const [talking, setTalking] = useState(false)
+  const [username, setUsername] = useState(null)
+  const [color, setColor] = useState(null)
+  const timeoutRef = useRef(null)
+  const inactivityRef = useRef(null)
 
   useEffect(() => {
     if (occupied) {
@@ -201,7 +205,7 @@ function Seat (props) {
               {occupied
                 ? (
                   <Group>
-                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[ColorReplaceFilter]} />
+                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
                     {talking ? <Image image={talkingImage} x={25} y={-20} offsetX={48} offsetY={48} /> : null}
                   </Group>
                   )
