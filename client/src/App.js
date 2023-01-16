@@ -122,7 +122,7 @@ function Row (props) {
   )
 }
 
-const colorReplaceFn = color => {
+/* const colorReplaceFn = color => {
   function colorReplaceFilter (imageData) {
     if (!color) return
 
@@ -140,7 +140,7 @@ const colorReplaceFn = color => {
   }
 
   return colorReplaceFilter
-}
+} */
 
 function Seat (props) {
   const { width, height, seatStep, index, seat, offsetX, max } = props
@@ -151,7 +151,7 @@ function Seat (props) {
   const [occupied, setOccupied] = useState(false)
   const [talking, setTalking] = useState(false)
   const [username, setUsername] = useState(null)
-  const [color, setColor] = useState(null)
+  // const [color, setColor] = useState(null)
   const [emotes, setEmotes] = useState([])
   const timeoutRef = useRef(null)
   const inactivityRef = useRef(null)
@@ -159,17 +159,17 @@ function Seat (props) {
 
   useEffect(() => {
     if (occupied) {
-      seats[seat] = { occupied, talking, username, color, seat }
+      seats[seat] = { occupied, talking, username, /* color, */ seat }
     } else {
       delete seats[seat]
     }
-  }, [occupied, talking, username, color])
+  }, [occupied, talking, username/*, color */])
 
   useEffect(() => {
     if (!occupied) {
       setTalking(false)
       setUsername(null)
-      setColor(null)
+      // setColor(null)
       setEmotes([])
     }
   }, [occupied])
@@ -202,7 +202,7 @@ function Seat (props) {
     setTalking(true)
     setEmotes(incoming.emotes)
 
-    if (incoming.color && incoming.color !== color) setColor(incoming.color)
+    // if (incoming.color && incoming.color !== color) setColor(incoming.color)
     timeoutRef.current = setTimeout(() => setTalking(false), (incoming.emotes.length > 0 ? 3 * incoming.emotes.length : 4) * 1000)
     inactivityRef.current = setTimeout(() => setOccupied(false), 5 * 60 * 1000)
   })
@@ -216,7 +216,7 @@ function Seat (props) {
               {occupied
                 ? (
                   <Group>
-                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
+                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} /* filters={[colorReplaceFn(color)]} */ />
                     {talking ? <Bubble emote={emotes[0]} /> : null}
                   </Group>
                   )
