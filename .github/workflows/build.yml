@@ -32,4 +32,8 @@ jobs:
           git diff-index --quiet HEAD || git commit -m 'Deploy ${{ github.sha }}'
           git push 
           
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: server/build
       
