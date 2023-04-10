@@ -1,88 +1,15 @@
-import './styles/App.scss'
-
-import { useEffect, useRef, useState } from 'react'
 import { Stage, Layer, Image, Group } from 'react-konva'
 import useImage from 'use-image'
-import { Spring, animated/*, easings */ } from '@react-spring/konva'
 
+import Chat from './components/chat'
 import Overlay from './components/overlay'
-import { emitter, chatClient } from './components/chat'
+import { rowsInfo } from './utils/constants'
 
-function getRandom (list) {
-  return list[Math.floor((Math.random() * list.length))]
-}
-
-const rowsInfo = [
-  { max: 13, offset: { x: 30, y: 865 }, viewer: { width: 85, height: 85, seatStep: 152 } },
-  { max: 11, offset: { x: 100, y: 895 }, viewer: { width: 85, height: 85, seatStep: 168 } },
-  { image: false, max: 11, offset: { x: 15, y: 925 }, viewer: { width: 90, height: 90, seatStep: 184 } }
-]
-
-const allSeats = [...Array(rowsInfo.map(row => row.max).reduce((a, b) => a + b)).keys()]
-const seats = []
-
-let seatCount = 0
-rowsInfo.forEach(row => {
-  row.start = seatCount
-  seatCount += row.max
-})
-
-function addViewer () {
-  const availableSeats = allSeats.filter(index => ![...seats.keys()].includes(index))
-  const seat = getRandom(availableSeats)
-
-  emitter.emit(`fill-${seat}`)
-  return seat
-}
-
-emitter.on('viewers', viewers => {
-  const occupiedLength = seats.filter(seat => !!seat).length
-  if (occupiedLength === viewers) return
-
-  if (occupiedLength < viewers) {
-    const addLength = viewers - occupiedLength
-    for (let i = 0; i < addLength; i++) {
-      addViewer()
-    }
-  } else if (occupiedLength > viewers) {
-    const [heartless, chatViewers] = seats.reduce((acc, viewer) => {
-      acc[viewer.username ? 1 : 0].push(viewer)
-      return acc
-    }, [[], []])
-    chatViewers.sort((a, b) => a.lastMessage - b.lastMessage)
-
-    const removeLength = occupiedLength - viewers
-
-    for (let i = 0; i < removeLength; i++) {
-      let seatIndex
-      if (heartless.length > 0) {
-        seatIndex = heartless[0].seat
-        heartless.splice(0, 1)
-      } /* else {
-        seatIndex = chatViewers[0].seat
-        chatViewers.splice(0, 1)
-      } */
-
-      emitter.emit(`empty-${seatIndex}`)
-    }
-  }
-})
-
-chatClient.on('chat', (_, user, message, self) => {
-  if (self) return
-
-  const { username } = user
-  let seatNumber = seats.findIndex(s => s && s.username === username)
-
-  if (seatNumber === -1) {
-    seatNumber = seats.findIndex(s => s && s.username === null)
-    if (seatNumber === -1) seatNumber = addViewer()
-
-    emitter.emit(`sit-${seatNumber}`, username)
-  }
-
-  emitter.emit(`talk-${seatNumber}`, { color: user.color, emotes: user.emotes ? Object.keys(user.emotes) : [] })
-})
+import './styles/App.scss'
+import { useDispatch, useSelector } from 'react-redux'
+import { useEffect, useMemo, useRef } from 'react'
+import { animated, Spring } from '@react-spring/konva'
+import { handleMessage, leaveSeat, stopTalk } from './slices/chat'
 
 export default function App () {
   const [screenImage] = useImage('/img/screen.png')
@@ -90,6 +17,7 @@ export default function App () {
 
   return (
     <>
+      <Chat />
       <Overlay />
       <Stage width={1920} height={1080}>
         <Layer>
@@ -108,21 +36,22 @@ export default function App () {
 
 function Row (props) {
   const { info, index } = props
-  const { viewer = {}, offset = {}, start, image = true, max } = info
+  const { viewer = {}, offset = {}, start, end, image = true, max } = info
+
   const [rowsImage] = useImage(`/img/rows${index}.png`)
+  const seatList = useSelector(state => Object.keys(state.chat.seats).filter(k => k >= start && k <= end))
 
   return (
-    <>
-      <Group x={offset.x} y ={offset.y}>
-        {[...Array(max).keys()]
-          .map(index => <Seat key={index} index={index} seat={start + index} offsetX={offset.x} max={max} {...viewer} />)}
-      </Group>
-      {image ? <Image image={rowsImage} /> : null}
-    </>
+  <>
+  <Group x={offset.x} y ={offset.y}>
+    {seatList.map(seatNumber => <Seat key={seatNumber} seatNumber={seatNumber} rowInfo={info}/>)}
+  </Group>
+  {image ? <Image image={rowsImage} /> : null}
+</>
   )
 }
 
-/* const colorReplaceFn = color => {
+const colorReplaceFn = color => {
   function colorReplaceFilter (imageData) {
     if (!color) return
 
@@ -140,92 +69,59 @@ function Row (props) {
   }
 
   return colorReplaceFilter
-} */
+}
 
 function Seat (props) {
-  const { width, height, seatStep, index, seat, offsetX, max } = props
+  const { seatNumber, rowInfo = {} } = props
+
+  const dispatch = useDispatch()
 
   const [viewerImage] = useImage('/img/viewer.png')
   const viewerImageRef = useRef()
 
-  const [occupied, setOccupied] = useState(false)
-  const [talking, setTalking] = useState(false)
-  const [username, setUsername] = useState(null)
-  // const [color, setColor] = useState(null)
-  const [emotes, setEmotes] = useState([])
   const timeoutRef = useRef(null)
   const inactivityRef = useRef(null)
-  const emoteRef = useRef(null)
+
+  const talking = useSelector(state => state.chat.seats[seatNumber]?.talking)
+  const lastMessage = useSelector(state => state.chat.seats[seatNumber]?.lastMessage)
+  const color = useSelector(state => state.chat.seats[seatNumber]?.color)
 
   useEffect(() => {
-    if (occupied) {
-      seats[seat] = { occupied, talking, username, /* color, */ seat }
-    } else {
-      delete seats[seat]
+    if (talking) {
+      clearTimeout(timeoutRef.current)
+      clearTimeout(inactivityRef.current)
+
+      timeoutRef.current = setTimeout(() => dispatch(stopTalk({ seatNumber })), (/* incoming.emotes.length > 0 ? 3 * incoming.emotes.length : */ 4) * 1000)
+      inactivityRef.current = setTimeout(() => dispatch(leaveSeat({ seatNumber })), 5 * 60 * 1000)
     }
-  }, [occupied, talking, username/*, color */])
+  }, [talking, lastMessage])
 
-  useEffect(() => {
-    if (!occupied) {
-      setTalking(false)
-      setUsername(null)
-      // setColor(null)
-      setEmotes([])
-    }
-  }, [occupied])
-
-  useEffect(() => {
-    if (occupied) viewerImageRef.current.cache()
-  }, [occupied])
-
-  useEffect(() => {
-    if (!occupied || emotes.length === 0) return
-
-    clearTimeout(emoteRef.current)
-
-    setTimeout(() => setEmotes(emotes.slice(1)), 3 * 1000)
-  }, [emotes])
+  const { viewer, start: rowStart, offset, max } = rowInfo
+  const { width, height, seatStep } = viewer
+  const index = seatNumber - rowStart
 
   const targetX = 0 + (index * seatStep)
   const entranceLeft = index <= Math.floor(max / 2)
-  const startX = entranceLeft ? -offsetX - (width / 2) : 1920 + (width / 2)
-  const duration = (entranceLeft ? offsetX + targetX : (max - index) * seatStep) * 3.6
-
-  emitter.on(`fill-${seat}`, () => setOccupied(true))
-  emitter.on(`empty-${seat}`, () => setOccupied(false))
-  emitter.on(`sit-${seat}`, incoming => setUsername(incoming))
-  emitter.on(`talk-${seat}`, incoming => {
-    clearTimeout(timeoutRef.current)
-    clearTimeout(inactivityRef.current)
-
-    seats[seat].lastMessage = Date.now()
-    setTalking(true)
-    setEmotes(incoming.emotes)
-
-    // if (incoming.color && incoming.color !== color) setColor(incoming.color)
-    timeoutRef.current = setTimeout(() => setTalking(false), (incoming.emotes.length > 0 ? 3 * incoming.emotes.length : 4) * 1000)
-    inactivityRef.current = setTimeout(() => setOccupied(false), 5 * 60 * 1000)
-  })
+  const startX = entranceLeft ? -offset.x - (width / 2) : 1920 + (width / 2)
+  const duration = (entranceLeft ? offset.x + targetX : (max - index) * seatStep) * 3.6
 
   return (
-    <Spring native immediate={!occupied} from={{ x: startX }} to={{ x: occupied ? targetX : startX }} config={{ duration }}>
-      {slideProps => (
-        /* {<Spring native loop={true} from={{ y: 0 }} to={occupied ? [{ y: -20 }, { y: -5 }] : { y: 0 }} config={{ easing: easings.easeInOutSine }} duration={25}>
-          {bounceProps => ( */
-            <animated.Group {...slideProps} /* {...bounceProps} */>
-              {occupied
-                ? (
-                  <Group>
-                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} /* filters={[colorReplaceFn(color)]} */ />
-                    {talking ? <Bubble emote={emotes[0]} /> : null}
+    <>
+      <Spring native from={{ x: startX }} to={{ x: targetX }} config={{ duration }}>
+        {slideProps => (
+          /* {<Spring native loop={true} from={{ y: 0 }} to={occupied ? [{ y: -20 }, { y: -5 }] : { y: 0 }} config={{ easing: easings.easeInOutSine }} duration={25}>
+            {bounceProps => ( */
+              <animated.Group {...slideProps} /* {...bounceProps} */>
+                    <Group>
+                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
+                    { talking ? <Bubble /* emote={emotes[0]} */ /> : null }
                   </Group>
-                  )
-                : null}
-            </animated.Group>
-        /*  )}
-        </Spring> */
-      )}
-    </Spring>
+                          </animated.Group>
+          /*  )}
+          </Spring> */
+        )}
+      </Spring>
+    </>
   )
 }
 

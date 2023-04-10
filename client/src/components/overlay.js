@@ -1,19 +1,13 @@
-import { useState } from 'react'
-import { chatClient } from './chat'
+import { useSelector } from 'react-redux'
 
 import styles from '../styles/Overlay.module.scss'
 
 export default function Overlay () {
-  const [connected, setConnected] = useState(false)
+  const connected = useSelector(state => state.chat.connected)
 
-  chatClient.on('connected', () => setConnected(true))
-  chatClient.on('disconnected', () => setConnected(false))
-
-  return connected
-    ? null
-    : (
+  return (
     <div id={styles.root}>
-      <div>Connecting....</div>
+      {!connected ? <div>Connecting....</div> : null}
     </div>
-      )
+  )
 }
