@@ -7,9 +7,9 @@ import { rowsInfo } from './utils/constants'
 
 import './styles/App.scss'
 import { useDispatch, useSelector } from 'react-redux'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { animated, Spring } from '@react-spring/konva'
-import { handleMessage, leaveSeat, stopTalk } from './slices/chat'
+import { leaveSeat, stopTalk } from './slices/chat'
 
 export default function App () {
   const [screenImage] = useImage('/img/screen.png')
@@ -36,7 +36,7 @@ export default function App () {
 
 function Row (props) {
   const { info, index } = props
-  const { viewer = {}, offset = {}, start, end, image = true, max } = info
+  const { offset = {}, start, end, image = true } = info
 
   const [rowsImage] = useImage(`/img/rows${index}.png`)
   const seatList = useSelector(state => Object.keys(state.chat.seats).filter(k => k >= start && k <= end))
