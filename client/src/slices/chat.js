@@ -2,11 +2,7 @@ import { createSlice } from '@reduxjs/toolkit'
 
 import { allSeats, maxSeats } from '../utils/constants'
 
-/* {
-  seatNumber
-  username
-  talking
-} */
+const defaultSeat = (seatNumber) => ({ seatNumber, username: null, talking: false, emotes: [], lastMessage: -1 })
 
 function getRandomSeatNumber (seatList) {
   const seatIndex = Math.floor((Math.random() * seatList.length))
@@ -26,7 +22,7 @@ function addViewers (startAmmount, state) {
 
     availableSeats.splice(seatIndex, 1)
 
-    state.seats[seatNumber] = { seatNumber, username: null, talking: false, lastMessage: -1 }
+    state.seats[seatNumber] = defaultSeat(seatNumber)
     ammount = ammount - 1
   }
 
@@ -69,7 +65,7 @@ export const chatSlice = createSlice({
       if (state.viewers !== newViewers) state.viewers = newViewers
     },
     handleMessage: (state, action) => {
-      const { username, color } = action.payload
+      const { username, color, emotes } = action.payload
       const seatsValues = [...Object.values(state.seats)]
 
       let seat = seatsValues.find(s => s && s.username === username)
@@ -85,10 +81,21 @@ export const chatSlice = createSlice({
         seatNumber = seat.seatNumber
       }
 
+      const sortedEmotes = Object.entries(emotes)
+        .reduce((list, entry) => {
+          const [emote, value] = entry
+
+          list.push(...value.map(v => ({ emote, value: parseInt(v.split('-')[0]) })))
+
+          return list
+        }, [])
+        .sort((a, b) => a.value - b.value)
+        .map(v => v.emote)
+
       state.seats[seatNumber].lastMessage = Date.now()
       state.seats[seatNumber].talking = true
       state.seats[seatNumber].color = color
-      // emitter.emit(`talk-${seatNumber}`, { color: user.color, emotes: user.emotes ? Object.keys(user.emotes) : [] }) */
+      state.seats[seatNumber].emotes.push(...sortedEmotes)
     },
     clearSeat: (state, action) => {
       const { seatNumber } = action.payload
@@ -101,7 +108,13 @@ export const chatSlice = createSlice({
     },
     stopTalk: (state, action) => {
       const { seatNumber } = action.payload
-      state.seats[seatNumber].talking = false
+      state.seats[seatNumber].emotes.shift()
+
+      if (state.seats[seatNumber].emotes.length > 0) {
+        state.seats[seatNumber].lastMessage = Date.now()
+      } else {
+        state.seats[seatNumber].talking = false
+      }
     }
   }
 })

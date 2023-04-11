@@ -1,9 +1,10 @@
 import { Stage, Layer, Image, Group } from 'react-konva'
-import useImage from './utils/useImage'
+import useImage from 'use-image'
 
-import Chat from './components/chat'
 import Overlay from './components/overlay'
+import startChat from './components/chat'
 import { rowsInfo } from './utils/constants'
+import useImageWrapper from './utils/useImage'
 
 import './styles/App.scss'
 import { useDispatch, useSelector } from 'react-redux'
@@ -11,13 +12,14 @@ import { useEffect, useRef } from 'react'
 import { animated, Spring } from '@react-spring/konva'
 import { leaveSeat, stopTalk } from './slices/chat'
 
+startChat()
+
 export default function App () {
-  const [screenImage] = useImage('/img/screen.png')
-  const [rowsImage] = useImage('/img/rows.png')
+  const [screenImage] = useImageWrapper('/img/screen.png')
+  const [rowsImage] = useImageWrapper('/img/rows.png')
 
   return (
     <>
-      <Chat />
       <Overlay />
       <Stage width={1920} height={1080}>
         <Layer>
@@ -38,7 +40,7 @@ function Row (props) {
   const { info, index } = props
   const { offset = {}, start, end, image = true } = info
 
-  const [rowsImage] = useImage(`/img/rows${index}.png`)
+  const [rowsImage] = useImageWrapper(`/img/rows${index}.png`)
   const seatList = useSelector(state => Object.keys(state.chat.seats).filter(k => k >= start && k <= end))
 
   return (
@@ -76,7 +78,7 @@ function Seat (props) {
 
   const dispatch = useDispatch()
 
-  const [viewerImage] = useImage('/img/viewer.png')
+  const [viewerImage] = useImageWrapper('/img/viewer.png')
   const viewerImageRef = useRef()
 
   const timeoutRef = useRef(null)
@@ -85,6 +87,7 @@ function Seat (props) {
   const talking = useSelector(state => state.chat.seats[seatNumber]?.talking)
   const lastMessage = useSelector(state => state.chat.seats[seatNumber]?.lastMessage)
   const color = useSelector(state => state.chat.seats[seatNumber]?.color)
+  const emotes = useSelector(state => state.chat.seats[seatNumber]?.emotes)
 
   useEffect(() => {
     if (talking) {
@@ -114,7 +117,7 @@ function Seat (props) {
               <animated.Group {...slideProps} /* {...bounceProps} */>
                     <Group>
                     <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
-                    { talking ? <Bubble /* emote={emotes[0]} */ /> : null }
+                    {talking ? <Bubble emote={emotes[0]} /> : null }
                   </Group>
                           </animated.Group>
           /*  )}
@@ -127,8 +130,8 @@ function Seat (props) {
 
 function Bubble (props) {
   const { emote } = props
-  const [talkBaseImage] = useImage('/img/talkBase.png')
-  const [talkDotsImage] = useImage('/img/talkDots.png')
+  const [talkBaseImage] = useImageWrapper('/img/talkBase.png')
+  const [talkDotsImage] = useImageWrapper('/img/talkDots.png')
   const [emoteImage] = useImage(`https://static-cdn.jtvnw.net/emoticons/v2/${emote || '25'}/static/dark/2.0`)
 
   return (
