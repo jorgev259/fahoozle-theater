@@ -1,5 +1,5 @@
 import { Stage, Layer, Image, Group } from 'react-konva'
-import useImage from 'use-image'
+import useImage from './utils/useImage'
 
 import Chat from './components/chat'
 import Overlay from './components/overlay'
