@@ -41,7 +41,7 @@ export default function Chat () {
 
     chatClient.on('chat', (_, user, message, self) => {
       if (self) return
-      dispatch(handleMessage({ username, color: user.color }))
+      dispatch(handleMessage({ username: user['user-id'], color: user.color }))
     })
   }, [])
 
