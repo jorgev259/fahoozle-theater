@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/fahoozle-theater/static/css/main.e42a9bde.css",
-    "main.js": "/fahoozle-theater/static/js/main.00a07297.js",
+    "main.js": "/fahoozle-theater/static/js/main.050628ab.js",
     "index.html": "/fahoozle-theater/index.html",
     "main.e42a9bde.css.map": "/fahoozle-theater/static/css/main.e42a9bde.css.map",
-    "main.00a07297.js.map": "/fahoozle-theater/static/js/main.00a07297.js.map"
+    "main.050628ab.js.map": "/fahoozle-theater/static/js/main.050628ab.js.map"
   },
   "entrypoints": [
     "static/css/main.e42a9bde.css",
-    "static/js/main.00a07297.js"
+    "static/js/main.050628ab.js"
   ]
 }
