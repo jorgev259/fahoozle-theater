@@ -12,11 +12,14 @@ import { useEffect, useRef } from 'react'
 import { animated, Spring } from '@react-spring/konva'
 import { leaveSeat, stopTalk } from './slices/chat'
 
+const queryParams = new URLSearchParams(location.search)
+const skin = queryParams.get('skin') || 'default'
+
 startChat()
 
 export default function App () {
-  const [screenImage] = useImageWrapper('/img/screen.png')
-  const [rowsImage] = useImageWrapper('/img/rows.png')
+  const [screenImage] = useImageWrapper(`/img/${skin}/screen.png`)
+  const [rowsImage] = useImageWrapper(`/img/${skin}/rows.png`)
 
   return (
     <>
@@ -40,7 +43,7 @@ function Row (props) {
   const { info, index } = props
   const { offset = {}, start, end, image = true } = info
 
-  const [rowsImage] = useImageWrapper(`/img/rows${index}.png`)
+  const [rowsImage] = useImageWrapper(`/img/${skin}/rows${index}.png`)
   const seatList = useSelector(state => Object.keys(state.chat.seats).filter(k => k >= start && k <= end))
 
   return (
@@ -78,7 +81,7 @@ function Seat (props) {
 
   const dispatch = useDispatch()
 
-  const [viewerImage] = useImageWrapper('/img/viewer.png')
+  const [viewerImage] = useImageWrapper(`/img/${skin}/viewer.png`)
   const viewerImageRef = useRef()
 
   const timeoutRef = useRef(null)
