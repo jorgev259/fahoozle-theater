@@ -49,6 +49,12 @@ export const chatSlice = createSlice({
   reducers: {
     updateChat: (state, action) => {
       state.connected = action.payload
+
+      if (state.connected) {
+        const queryParams = new URLSearchParams(window.location.search)
+        const allEnabled = queryParams.get('all') === 'true'
+        if (allEnabled) addViewers(35, state)
+      }
     },
     updateViewers: (state, action) => {
       const newViewers = Math.min(action.payload, maxSeats)
