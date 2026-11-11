@@ -150,6 +150,7 @@ function Seat(props) {
         5 * 60 * 1000
       )
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [talking, lastMessage])
 
   const { viewer, start: rowStart, offset, max } = rowInfo
