@@ -14,10 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: fregante/setup-git-user@v1
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version: latest
           cache: yarn
+          cache-dependency-path: |
+            client/package.json
+            client/yarn.lock
 
       - name: Prepare
         run: |
