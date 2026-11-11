@@ -16,6 +16,19 @@ const queryParams = new URLSearchParams(window.location.search)
 const skin = queryParams.get('skin') || 'default'
 const spookyViewerColor = [255, 165, 0]
 
+const hexToRgb = (hex) => {
+  if (Array.isArray(hex)) return hex
+
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '')
+  if (!match) return null
+
+  return [
+    parseInt(match[1], 16),
+    parseInt(match[2], 16),
+    parseInt(match[3], 16)
+  ]
+}
+
 startChat()
 
 export default function App() {
@@ -119,7 +132,7 @@ function Seat(props) {
     (state) => state.chat.seats[seatNumber]?.lastMessage
   )
   const color = useSelector((state) => state.chat.seats[seatNumber]?.color)
-  const viewerColor = skin === 'spooky' ? spookyViewerColor : color
+  const viewerColor = skin === 'spooky' ? spookyViewerColor : hexToRgb(color)
   const emotes = useSelector((state) => state.chat.seats[seatNumber]?.emotes)
   const moving = useSelector((state) => state.chat.seats[seatNumber]?.moving)
 
