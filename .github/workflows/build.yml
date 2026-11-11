@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -16,13 +16,19 @@ jobs:
       - uses: fregante/setup-git-user@v1
       - uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: 26
+          cache: yarn
+
+      - name: Prepare
+        run: |
+          npm i -g corepack
+          corepack enable
 
       - name: Build website
         run: |
           cd client
-          npm install --force
-          npm run build
+          yarn --frozen-lockfile
+          yarn build
           rm -r ../server/build
           mv build ../server/build
 
@@ -30,10 +36,9 @@ jobs:
         run: |
           git add -A
           git diff-index --quiet HEAD || git commit -m 'Deploy ${{ github.sha }}'
-          git push 
-          
+          git push
+
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: server/build
-      
