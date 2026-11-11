@@ -2,18 +2,28 @@ import { createSlice } from '@reduxjs/toolkit'
 
 import { allSeats, maxSeats } from '../utils/constants'
 
-const defaultSeat = (seatNumber) => ({ seatNumber, username: null, talking: false, emotes: [], lastMessage: -1 })
+const defaultSeat = (seatNumber) => ({
+  seatNumber,
+  username: null,
+  talking: false,
+  emotes: [],
+  lastMessage: -1,
+  moving: false,
+  stunned: false
+})
 
-function getRandomSeatNumber (seatList) {
-  const seatIndex = Math.floor((Math.random() * seatList.length))
+function getRandomSeatNumber(seatList) {
+  const seatIndex = Math.floor(Math.random() * seatList.length)
   const seatNumber = seatList[seatIndex]
 
   return { seatNumber, seatIndex }
 }
 
-function addViewers (startAmmount, state) {
+function addViewers(startAmmount, state) {
   let ammount = startAmmount
-  const availableSeats = allSeats.filter(index => !Object.keys(state.seats).includes(index))
+  const availableSeats = allSeats.filter(
+    (index) => !Object.keys(state.seats).includes(index)
+  )
   const result = []
 
   while (ammount > 0) {
@@ -50,7 +60,9 @@ export const chatSlice = createSlice({
 
       if (newViewers < state.viewers) {
         let ammount = state.viewers - newViewers
-        const removableSeats = [...Object.values(state.seats)].filter(seat => seat.username === null).map(seat => seat.seatNumber)
+        const removableSeats = [...Object.values(state.seats)]
+          .filter((seat) => seat.username === null)
+          .map((seat) => seat.seatNumber)
 
         while (ammount > 0 && removableSeats.length > 0) {
           const { seatIndex, seatNumber } = getRandomSeatNumber(removableSeats)
@@ -68,11 +80,11 @@ export const chatSlice = createSlice({
       const { username, color, emotes } = action.payload
       const seatsValues = [...Object.values(state.seats)]
 
-      let seat = seatsValues.find(s => s && s.username === username)
+      let seat = seatsValues.find((s) => s && s.username === username)
       let seatNumber
 
       if (!seat) {
-        seat = seatsValues.find(s => s && s.username === null)
+        seat = seatsValues.find((s) => s && s.username === null)
         if (!seat) seatNumber = addViewers(1, state)[0]
         else seatNumber = seat.seatNumber
 
@@ -85,12 +97,14 @@ export const chatSlice = createSlice({
         .reduce((list, entry) => {
           const [emote, value] = entry
 
-          list.push(...value.map(v => ({ emote, value: parseInt(v.split('-')[0]) })))
+          list.push(
+            ...value.map((v) => ({ emote, value: parseInt(v.split('-')[0]) }))
+          )
 
           return list
         }, [])
         .sort((a, b) => a.value - b.value)
-        .map(v => v.emote)
+        .map((v) => v.emote)
 
       state.seats[seatNumber].lastMessage = Date.now()
       state.seats[seatNumber].talking = true
@@ -115,9 +129,26 @@ export const chatSlice = createSlice({
       } else {
         state.seats[seatNumber].talking = false
       }
+    },
+    setMoving: (state, action) => {
+      const { seatNumber, value } = action.payload
+      state.seats[seatNumber].moving = value
+    },
+    setStun: (state, action) => {
+      const { seatNumber, value } = action.payload
+      state.seats[seatNumber].stunned = value
     }
   }
 })
 
-export const { updateChat, updateViewers, handleMessage, stopTalk, clearSeat, leaveSeat } = chatSlice.actions
+export const {
+  updateChat,
+  updateViewers,
+  handleMessage,
+  stopTalk,
+  clearSeat,
+  leaveSeat,
+  setMoving,
+  setStun
+} = chatSlice.actions
 export default chatSlice.reducer

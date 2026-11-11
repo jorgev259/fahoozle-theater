@@ -1,7 +1,7 @@
 export const rowsInfo = [
-  { max: 13, offset: { x: 30, y: 865 }, viewer: { width: 85, height: 85, seatStep: 152 } },
-  { max: 11, offset: { x: 100, y: 895 }, viewer: { width: 85, height: 85, seatStep: 168 } },
-  { image: false, max: 11, offset: { x: 15, y: 925 }, viewer: { width: 90, height: 90, seatStep: 184 } }
+  { max: 13, offset: { x: 30, y: 797 }, viewer: { width: 115, height: 153, seatStep: 152 } },
+  { max: 11, offset: { x: 100, y: 827 }, viewer: { width: 115, height: 153, seatStep: 168 } },
+  { image: false, max: 11, offset: { x: 15, y: 878 }, viewer: { width: 110, height: 137, seatStep: 184 } }
 ]
 
 export const seatInfo = []

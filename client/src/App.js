@@ -10,9 +10,9 @@ import './styles/App.scss'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect, useRef } from 'react'
 import { animated, Spring } from '@react-spring/konva'
-import { leaveSeat, stopTalk } from './slices/chat'
+import { leaveSeat, setMoving, setStun, stopTalk } from './slices/chat'
 
-const queryParams = new URLSearchParams(location.search)
+const queryParams = new URLSearchParams(window.location.search)
 const skin = queryParams.get('skin') || 'default'
 const spookyViewerColor = [255, 165, 0]
 
@@ -30,7 +30,9 @@ export default function App() {
           <Image image={screenImage} />
         </Layer>
         <Layer>
-          {rowsInfo.map((info, index) => <Row key={index} index={index} info={info}/>)}
+          {rowsInfo.map((info, index) => (
+            <Row key={index} index={index} info={info} />
+          ))}
         </Layer>
         <Layer>
           <Image image={rowsImage} />
@@ -40,25 +42,29 @@ export default function App() {
   )
 }
 
-function Row (props) {
+function Row(props) {
   const { info, index } = props
   const { offset = {}, start, end, image = true } = info
 
   const [rowsImage] = useImageWrapper(`/img/${skin}/rows${index}.png`)
-  const seatList = useSelector(state => Object.keys(state.chat.seats).filter(k => k >= start && k <= end))
+  const seatList = useSelector((state) =>
+    Object.keys(state.chat.seats).filter((k) => k >= start && k <= end)
+  )
 
   return (
-  <>
-  <Group x={offset.x} y ={offset.y}>
-    {seatList.map(seatNumber => <Seat key={seatNumber} seatNumber={seatNumber} rowInfo={info}/>)}
-  </Group>
-  {image ? <Image image={rowsImage} /> : null}
-</>
+    <>
+      <Group x={offset.x} y={offset.y}>
+        {seatList.map((seatNumber) => (
+          <Seat key={seatNumber} seatNumber={seatNumber} rowInfo={info} />
+        ))}
+      </Group>
+      {image ? <Image image={rowsImage} /> : null}
+    </>
   )
 }
 
-const colorReplaceFn = color => {
-  function colorReplaceFilter (imageData) {
+const colorReplaceFn = (color) => {
+  function colorReplaceFilter(imageData) {
     if (!color) return
 
     const nPixels = imageData.data.length
@@ -76,26 +82,60 @@ const colorReplaceFn = color => {
   return colorReplaceFilter
 }
 
-function Seat (props) {
+const yellowTintFn = (enabled) => {
+  function yellowTintFilter(imageData) {
+    if (!enabled) return
+
+    const data = imageData.data
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue
+
+      data[i] = 255
+      data[i + 1] = 255
+      data[i + 2] = 0
+      data[i + 3] = data[i + 3] * 0.5
+    }
+  }
+
+  return yellowTintFilter
+}
+
+function Seat(props) {
   const { seatNumber, rowInfo = {} } = props
 
   const dispatch = useDispatch()
 
   const [viewerImage] = useImageWrapper('/img/viewer.png')
+  const [carrierImage] = useImageWrapper('/img/carrier.png')
   const viewerImageRef = useRef()
+  const carrierImageRef = useRef()
 
   const timeoutRef = useRef(null)
   const inactivityRef = useRef(null)
 
+  const stunned = useSelector((state) => state.chat.seats[seatNumber]?.stunned)
+  const talking = useSelector((state) => state.chat.seats[seatNumber]?.talking)
+  const lastMessage = useSelector(
+    (state) => state.chat.seats[seatNumber]?.lastMessage
+  )
+  const color = useSelector((state) => state.chat.seats[seatNumber]?.color)
   const viewerColor = skin === 'spooky' ? spookyViewerColor : color
+  const emotes = useSelector((state) => state.chat.seats[seatNumber]?.emotes)
+  const moving = useSelector((state) => state.chat.seats[seatNumber]?.moving)
 
   useEffect(() => {
     if (talking) {
       clearTimeout(timeoutRef.current)
       clearTimeout(inactivityRef.current)
 
-      timeoutRef.current = setTimeout(() => dispatch(stopTalk({ seatNumber })), (/* incoming.emotes.length > 0 ? 3 * incoming.emotes.length : */ 4) * 1000)
-      inactivityRef.current = setTimeout(() => dispatch(leaveSeat({ seatNumber })), 5 * 60 * 1000)
+      timeoutRef.current = setTimeout(
+        () => dispatch(stopTalk({ seatNumber })),
+        /* incoming.emotes.length > 0 ? 3 * incoming.emotes.length : */ 4 * 1000
+      )
+      inactivityRef.current = setTimeout(
+        () => dispatch(leaveSeat({ seatNumber })),
+        5 * 60 * 1000
+      )
     }
   }, [talking, lastMessage])
 
@@ -103,23 +143,64 @@ function Seat (props) {
   const { width, height, seatStep } = viewer
   const index = seatNumber - rowStart
 
-  const targetX = 0 + (index * seatStep)
+  const targetX = 0 + index * seatStep
   const entranceLeft = index <= Math.floor(max / 2)
-  const startX = entranceLeft ? -offset.x - (width / 2) : 1920 + (width / 2)
-  const duration = (entranceLeft ? offset.x + targetX : (max - index) * seatStep) * 3.6
+  const startX = entranceLeft ? -offset.x - width / 2 : 1920 + width / 2
+  const duration =
+    (entranceLeft ? offset.x + targetX : (max - index) * seatStep) * 3.6
+
+  useEffect(() => {
+    const node = viewerImageRef.current
+    if (!node || !viewerImage || !width || !height) return
+
+    node.cache()
+  }, [viewerImage, width, height, viewerColor, stunned])
+
+  function handleStart() {
+    dispatch(setMoving({ seatNumber, value: true }))
+  }
+
+  function handleRest() {
+    dispatch(setMoving({ seatNumber, value: false }))
+    dispatch(setStun({ seatNumber, value: true }))
+
+    setTimeout(() => {
+      dispatch(setStun({ seatNumber, value: false }))
+    }, 0.85 * 1000)
+  }
 
   return (
     <>
-      <Spring native from={{ x: startX }} to={{ x: targetX }} config={{ duration }}>
-        {slideProps => (
+      <Spring
+        onStart={handleStart}
+        onRest={handleRest}
+        from={{ x: startX }}
+        to={{ x: targetX }}
+        config={{ duration }}
+      >
+        {(slideProps) => (
           /* {<Spring native loop={true} from={{ y: 0 }} to={occupied ? [{ y: -20 }, { y: -5 }] : { y: 0 }} config={{ easing: easings.easeInOutSine }} duration={25}>
             {bounceProps => ( */
-              <animated.Group {...slideProps} /* {...bounceProps} */>
-                    <Group>
-                    <Image ref={viewerImageRef} image={viewerImage} width={width} height={height} filters={[colorReplaceFn(color)]} />
-                    {talking ? <Bubble emote={emotes[0]} /> : null }
-                  </Group>
-                          </animated.Group>
+          <animated.Group {...slideProps} /* {...bounceProps} */>
+            <Group>
+              <Image
+                ref={viewerImageRef}
+                image={viewerImage}
+                width={width}
+                height={height}
+                filters={[colorReplaceFn(viewerColor), yellowTintFn(stunned)]}
+              />
+              {moving ? (
+                <Image
+                  ref={carrierImageRef}
+                  image={carrierImage}
+                  width={width}
+                  height={height}
+                />
+              ) : null}
+              {talking ? <Bubble emote={emotes[0]} /> : null}
+            </Group>
+          </animated.Group>
           /*  )}
           </Spring> */
         )}
@@ -128,16 +209,22 @@ function Seat (props) {
   )
 }
 
-function Bubble (props) {
+function Bubble(props) {
   const { emote } = props
   const [talkBaseImage] = useImageWrapper('/img/talkBase.png')
   const [talkDotsImage] = useImageWrapper('/img/talkDots.png')
-  const [emoteImage] = useImage(`https://static-cdn.jtvnw.net/emoticons/v2/${emote || '25'}/static/dark/2.0`)
+  const [emoteImage] = useImage(
+    `https://static-cdn.jtvnw.net/emoticons/v2/${emote || '25'}/static/dark/2.0`
+  )
 
   return (
-    <Group x={25} y={-20} offsetX={48} offsetY={48} >
-      <Image image={talkBaseImage}/>
-      {emote ? <Image image={emoteImage} height={30} x={18} y={18} rotation={15}/> : <Image image={talkDotsImage} />}
+    <Group x={25} y={-20} offsetX={48} offsetY={48}>
+      <Image image={talkBaseImage} />
+      {emote ? (
+        <Image image={emoteImage} height={30} x={18} y={18} rotation={15} />
+      ) : (
+        <Image image={talkDotsImage} />
+      )}
     </Group>
   )
 }
