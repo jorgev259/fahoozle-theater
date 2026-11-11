@@ -14,10 +14,11 @@ import { leaveSeat, stopTalk } from './slices/chat'
 
 const queryParams = new URLSearchParams(location.search)
 const skin = queryParams.get('skin') || 'default'
+const spookyViewerColor = [255, 165, 0]
 
 startChat()
 
-export default function App () {
+export default function App() {
   const [screenImage] = useImageWrapper(`/img/${skin}/screen.png`)
   const [rowsImage] = useImageWrapper(`/img/${skin}/rows.png`)
 
@@ -61,11 +62,10 @@ const colorReplaceFn = color => {
     if (!color) return
 
     const nPixels = imageData.data.length
+    const rgbdata = Array.isArray(color) ? color : [255, 0, 0]
     for (let i = 0; i < nPixels - 4; i += 4) {
       const isTransparent = imageData.data[i + 3] === 0
       if (!isTransparent) {
-        const rgbdata = [255, 0, 0]
-
         imageData.data[i] = rgbdata[0]
         imageData.data[i + 1] = rgbdata[1]
         imageData.data[i + 2] = rgbdata[2]
@@ -81,16 +81,13 @@ function Seat (props) {
 
   const dispatch = useDispatch()
 
-  const [viewerImage] = useImageWrapper(`/img/${skin}/viewer.png`)
+  const [viewerImage] = useImageWrapper('/img/viewer.png')
   const viewerImageRef = useRef()
 
   const timeoutRef = useRef(null)
   const inactivityRef = useRef(null)
 
-  const talking = useSelector(state => state.chat.seats[seatNumber]?.talking)
-  const lastMessage = useSelector(state => state.chat.seats[seatNumber]?.lastMessage)
-  const color = useSelector(state => state.chat.seats[seatNumber]?.color)
-  const emotes = useSelector(state => state.chat.seats[seatNumber]?.emotes)
+  const viewerColor = skin === 'spooky' ? spookyViewerColor : color
 
   useEffect(() => {
     if (talking) {
